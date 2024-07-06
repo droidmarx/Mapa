@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
   alert("Geolocalização não é suportada pelo seu navegador.");
  }
 
- var socket = io();
+ var socket = io('/api/socket.js');
 
  socket.on('positions', function(users) {
   for (var id in users) {
