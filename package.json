@@ -1,0 +1,10 @@
+{
+ "name": "real-time-map",
+ "version": "1.0.0",
+ "scripts": {
+  "start": "vercel dev"
+ },
+ "dependencies": {
+  "socket.io": "^4.0.0"
+ }
+}
