@@ -22,13 +22,13 @@
 </head>
 <body>
   <h1>Mapa e Chat em Tempo Real</h1>
-  <input id="username" type="text" placeholder="Digite seu nome de usuário">
+  <input id="username" type="text" placeholder="Digite seu nome de usuário" autocomplete="username">
   <button id="login-btn">Logar</button>
   <div id="map"></div>
   <div id="chat">
     <h2>Chat em Tempo Real</h2>
     <form id="chat-form">
-      <textarea id="chat-input" placeholder="Digite sua mensagem..."></textarea>
+      <textarea id="chat-input" placeholder="Digite sua mensagem..." autocomplete="off"></textarea>
       <button type="submit" id="chat-send">Enviar</button>
     </form>
     <div id="chat-log"></div>
