@@ -9,7 +9,7 @@
     { "src": "/(.*)", "dest": "/public/index.html" }
   ],
   "env": {
-    "PORT": 3000
+    "PORT": "3000"
   },
   "headers": [
     {
