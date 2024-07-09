@@ -1,16 +1,14 @@
 const Ably = require('ably');
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const bodyParser = require('body-parser');
-const express = require('express');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.use(express.json());
 
 const ably = new Ably.Realtime('ynrGug.SXDJOg:aoStJmyUcLlpwgEzYsJt8CFDsTBCq-yMjqNn6_DkgvM');
-const channel = ably.channels.get('chat-demo');
 
 // Endpoint para autenticação
 app.get('/api/auth', (req, res) => {
@@ -66,3 +64,5 @@ app.post('/api/update-location', (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
+
+module.exports = app;
