@@ -1,23 +1,136 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Localizador em Tempo Real</title>
-    <link rel="stylesheet" href="/style.css">
-    <style>
-        #mapReal {
-            height: 500px;
-            width: 100%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa e Chat em Tempo Real</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    #map {
+      width: 70%;
+      height: 100vh;
+      float: left;
+    }
+    #chat {
+      width: 30%;
+      height: 100vh;
+      float: right;
+      padding: 10px;
+      border-left: 1px solid #ccc;
+    }
+  </style>
 </head>
 <body>
-    <h1>Localizador em Tempo Real</h1>
-    <div id="mapReal"></div>
+  <h1>Mapa e Chat em Tempo Real</h1>
+  <input id="username" type="text" placeholder="Digite seu nome de usuário">
+  <button id="login-btn">Logar</button>
+  <div id="map"></div>
+  <div id="chat">
+    <h2>Chat em Tempo Real</h2>
+    <form id="chat-form">
+      <textarea id="chat-input" placeholder="Digite sua mensagem..."></textarea>
+      <button type="submit" id="chat-send">Enviar</button>
+    </form>
+    <div id="chat-log"></div>
+  </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-    <script src="/script.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+  <script>
+    let map;
+    let markers = [];
+    let ablyClient;
+    let channel;
+
+    document.getElementById('login-btn').addEventListener('click', () => {
+      let username = document.getElementById('username').value;
+      if (username) {
+        initMap(username);
+        initChat(username);
+      } else {
+        alert('Por favor, digite seu nome de usuário');
+      }
+    });
+
+    function initMap(username) {
+      map = L.map('map').setView([37.7749, -122.4194], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+        subdomains: ['a', 'b', 'c']
+      }).addTo(map);
+
+      // Crie um marcador para o usuário atual
+      let marker = L.marker([37.7749, -122.4194]).addTo(map);
+      markers.push({ username, marker });
+
+      // Atualize a localização do usuário atual em tempo real
+      navigator.geolocation.watchPosition((position) => {
+        let lat = position.coords.latitude;
+        let lng = position.coords.longitude;
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 13);
+
+        // Requisição para obter a rua do usuário
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+          .then(response => response.json())
+          .then(data => {
+            let address = data.address;
+            let street = address.road || address.street;
+
+            // Crie um popup com o nome do usuário e a rua
+            let popupContent = `<b>${username}</b> está em ${street}`;
+            marker.bindPopup(popupContent).openPopup();
+          })
+          .catch(error => console.error('Erro ao obter rua:', error));
+      }, (error) => {
+        console.error('Erro ao obter localização:', error);
+      });
+
+      // Atualize a localização dos outros usuários em tempo real
+      setInterval(() => {
+        fetch('/api?endpoint=users') // Requisição para obter a lista de usuários
+          .then(response => response.json())
+          .then(users => {
+            users.forEach(user => {
+              let existingMarker = markers.find(m => m.username === user.username);
+              if (existingMarker) {
+                existingMarker.marker.setLatLng([user.lat, user.lng]);
+              } else {
+                // Crie um novo marcador para o usuário
+                let newMarker = L.marker([user.lat, user.lng]).addTo(map);
+                markers.push({ username: user.username, marker: newMarker });
+              }
+            });
+          })
+          .catch(error => console.error('Erro ao obter lista de usuários:', error));
+      }, 1000);
+    }
+
+    function initChat(username) {
+      ablyClient = new Ably.Realtime({ authUrl: '/api?endpoint=auth' });
+      channel = ablyClient.channels.get('chat-demo');
+
+      channel.subscribe('message', (message) => {
+        const chatLog = document.getElementById('chat-log');
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<b>${message.data.username}</b>: ${message.data.text}`;
+        chatLog.appendChild(messageElement);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      });
+
+      document.getElementById('chat-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput.value.trim() !== '') {
+          channel.publish('message', {
+            username: username,
+            text: chatInput.value
+          });
+          chatInput.value = '';
+        }
+      });
+    }
+  </script>
 </body>
 </html>
