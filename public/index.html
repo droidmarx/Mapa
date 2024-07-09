@@ -89,4 +89,57 @@
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({ username, lat, lng })
-            }).catch(error => console.
+            }).catch(error => console.error('Erro ao atualizar localização:', error));
+          })
+          .catch(error => console.error('Erro ao obter rua:', error));
+      }, (error) => {
+        console.error('Erro ao obter localização:', error);
+      });
+
+      // Atualize a localização dos outros usuários em tempo real
+      setInterval(() => {
+        fetch('/api/users') // Requisição para obter a lista de usuários
+          .then(response => response.json())
+          .then(users => {
+            users.forEach(user => {
+              let existingMarker = markers.find(m => m.username === user.username);
+              if (existingMarker) {
+                existingMarker.marker.setLatLng([user.lat, user.lng]);
+              } else {
+                // Crie um novo marcador para o usuário
+                let newMarker = L.marker([user.lat, user.lng]).addTo(map);
+                markers.push({ username: user.username, marker: newMarker });
+              }
+            });
+          })
+          .catch(error => console.error('Erro ao obter lista de usuários:', error));
+      }, 1000);
+    }
+
+    function initChat(username) {
+      ablyClient = new Ably.Realtime({ authUrl: '/api/auth' });
+      channel = ablyClient.channels.get('chat-demo');
+
+      channel.subscribe('message', (message) => {
+        const chatLog = document.getElementById('chat-log');
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<b>${message.data.username}</b>: ${message.data.text}`;
+        chatLog.appendChild(messageElement);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      });
+
+      document.getElementById('chat-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput.value.trim() !== '') {
+          channel.publish('message', {
+            username: username,
+            text: chatInput.value
+          });
+          chatInput.value = '';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
